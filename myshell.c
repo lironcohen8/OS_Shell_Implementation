@@ -13,17 +13,25 @@ int process_arglist(int count, char **arglist) {
 	int flag, son_exit_status;
 
 	if (strcmp(arglist[count], "&") == 0) { // process needs to run in the background
-		arglist[count] = NULL; // not send "&" symbol to son
 		int pid = fork();
 		if (pid == 0) { // son executes the command
+			arglist[count] = NULL; // not send "&" symbol to execvp
 			execvp(arglist[0], arglist);
 		}
-		else { // parent doesn't wait for son to finish
-			
-		}
+		// parent doesn't wait for son to finish
 	}
 	if (strcmp(arglist[count-1], ">") == 0) { // command has output redirecting
-		// TODO
+		char *filename = arglist[count];
+		int fd = open(filename, O_CREAT|O_WRONLY);
+		int pid = fork();
+		if (pid == 0) { // son executes th command
+			arglist[count-1] = NULL; // not send ">" symbol and filename to execvp
+			dup2(fd, 1); // make standard output of son to be fd
+			execvp(arglist[0], arglist);
+		}
+		else { // parent waits for son to finish
+			waitpid(pid, &son_exit_status, 0);
+		}
 	}
 	else {
 		for (int i = 0; i < count; i++) {
@@ -48,8 +56,4 @@ int process_arglist(int count, char **arglist) {
 int finalize(void)
 {
 	return 0;
-}
-
-int main(void)
-{
 }
