@@ -86,7 +86,6 @@ int process_arglist(int count, char **arglist) {
 				}
 			}
 		}
-		// TODO add errors where needed	
 	}
 	return 1;
 }
