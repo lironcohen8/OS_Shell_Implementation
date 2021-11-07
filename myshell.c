@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-int get_command_pipe_index(arglist);
+int get_command_pipe_index(int count, char **arglist);
 
 int prepare(void)
 {
@@ -16,7 +16,7 @@ int prepare(void)
 }
 
 int process_arglist(int count, char **arglist) {
-	int child_exit_status;
+	int child_exit_status, i;
 
 	if (strcmp(arglist[count], "&") == 0) { // process needs to run in the background
 		int pid = fork();
@@ -28,11 +28,11 @@ int process_arglist(int count, char **arglist) {
 	}
 
 	else if (strcmp(arglist[count-1], ">") == 0) { // command has output redirecting
-		signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 		char *filename = arglist[count];
 		int fd = open(filename, O_WRONLY | O_CREAT, 00777);
 		int pid = fork();
 		if (pid == 0) { // child executes th command
+			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			arglist[count-1] = NULL; // not send ">" symbol and filename to execvp
 			dup2(fd, 1); // make standard output of child to be fd
 			execvp(arglist[0], arglist);
@@ -43,11 +43,11 @@ int process_arglist(int count, char **arglist) {
 	}
 
 	else {
-		int i = get_command_pipe_index(count, arglist);
+		i = get_command_pipe_index(count, arglist);
 		if (i == -1) { // regular single command 
-			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			int pid = fork();
 			if (pid == 0) { // child executes the command
+				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				execvp(arglist[0], arglist);
 			}
 			else { // parent waits for child to finish
@@ -55,7 +55,6 @@ int process_arglist(int count, char **arglist) {
 			}
 		}
 		else { // command has a pipe
-			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			int pipefds[2]; // array for fds from pipe 
 			int pipe_status = pipe(pipefds);
 			if (pipe_status == -1) {
@@ -64,6 +63,7 @@ int process_arglist(int count, char **arglist) {
 			}
 			int pid1 = fork();
 			if (pid1 == 0) { // first child executes the first command
+				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				close(pipefds[0]); // closing reading pd for writing child
 				arglist[i] = NULL; // first child only gets first command
 				dup2(pipefds[1], 1); // make standard output of first child to be fd1
@@ -73,6 +73,7 @@ int process_arglist(int count, char **arglist) {
 				waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
 				int pid2 = fork();
 				if (pid2 == 0) { // second child executes the second command
+					signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 					close(pipefds[1]); // closing writing pd for reading child
 					arglist[i] = arglist[0]; // copy name to the first argument of the second command
 					dup2(pipefds[0], 0); // make standard input of second child to be fd0
