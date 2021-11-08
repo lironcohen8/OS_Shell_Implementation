@@ -24,7 +24,9 @@ int process_arglist(int count, char **arglist) {
 			arglist[count] = NULL; // not send "&" symbol to execvp
 			execvp(arglist[0], arglist);
 		}
-		// parent does not wait for child to finish
+		else { // parent does not wait for child to finish
+			signal(SIGCHLD,SIG_IGN); // SIGCHLD is ignored, the child entry is deleted from the process table. no zombie.
+		}
 	}
 
 	else if (strcmp(arglist[count-1], ">") == 0) { // command has output redirecting
