@@ -25,7 +25,7 @@ int process_arglist(int count, char **arglist) {
 			execvp(arglist[0], arglist);
 		}
 		else { // parent does not wait for child to finish
-			signal(SIGCHLD,SIG_IGN); // SIGCHLD is ignored, the child entry is deleted from the process table. no zombie.
+			signal(SIGCHLD, SIG_IGN); // SIGCHLD is ignored, the child entry is deleted from the process table. no zombie.
 		}
 	}
 
