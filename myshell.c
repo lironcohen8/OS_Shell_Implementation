@@ -18,10 +18,10 @@ int prepare(void)
 int process_arglist(int count, char **arglist) {
 	int child_exit_status, i;
 
-	if (strcmp(arglist[count], "&") == 0) { // process needs to run in the background
+	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
 		if (pid == 0) { // child executes the command
-			arglist[count] = NULL; // not send "&" symbol to execvp
+			arglist[count-1] = NULL; // not send "&" symbol to execvp
 			execvp(arglist[0], arglist);
 		}
 		else { // parent does not wait for child to finish
@@ -29,13 +29,13 @@ int process_arglist(int count, char **arglist) {
 		}
 	}
 
-	else if (strcmp(arglist[count-1], ">") == 0) { // command has output redirecting
-		char *filename = arglist[count];
+	else if (strcmp(arglist[count-2], ">") == 0) { // command has output redirecting
+		char *filename = arglist[count-1];
 		int fd = open(filename, O_WRONLY | O_CREAT, 00777);
 		int pid = fork();
 		if (pid == 0) { // child executes th command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
-			arglist[count-1] = NULL; // not send ">" symbol and filename to execvp
+			arglist[count-2] = NULL; // not send ">" symbol and filename to execvp
 			dup2(fd, 1); // make standard output of child to be fd
 			execvp(arglist[0], arglist);
 		}
