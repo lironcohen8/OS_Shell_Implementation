@@ -22,8 +22,9 @@ int process_arglist(int count, char **arglist) {
 
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
-		if (pid < 0) { // error
-			//TODO add here
+		if (pid < 0) { // error in fork
+			perror("Error in fork.");
+			exit(1);
 		}
 		if (pid == 0) { // child executes the command
 			arglist[count-1] = NULL; // not send "&" symbol to execvp
@@ -46,6 +47,10 @@ int process_arglist(int count, char **arglist) {
 			exit(1);
 		}
 		int pid = fork();
+		if (pid < 0) { // error in fork
+			perror("Error in fork.");
+			exit(1);
+		}
 		if (pid == 0) { // child executes th command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			arglist[count-2] = NULL; // not send ">" symbol and filename to execvp
@@ -69,6 +74,10 @@ int process_arglist(int count, char **arglist) {
 		i = get_command_pipe_index(count, arglist);
 		if (i == -1) { // regular single command 
 			int pid = fork();
+			if (pid < 0) { // error in fork
+				perror("Error in fork.");
+				exit(1);
+			}
 			if (pid == 0) { // child executes the command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				exec_status = execvp(arglist[0], arglist);
@@ -89,6 +98,10 @@ int process_arglist(int count, char **arglist) {
 				return 0;
 			}
 			int pid1 = fork();
+			if (pid1 < 0) { // error in fork
+				perror("Error in fork.");
+				exit(1);
+			}
 			if (pid1 == 0) { // first child executes the first command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				close(pipefds[0]); // closing reading pd for writing child
@@ -107,6 +120,10 @@ int process_arglist(int count, char **arglist) {
 			else { // parent
 				waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
 				int pid2 = fork();
+				if (pid2 < 0) { // error in fork
+					perror("Error in fork.");
+					exit(1);
+				}
 				if (pid2 == 0) { // second child executes the second command
 					signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 					close(pipefds[1]); // closing writing pd for reading child
