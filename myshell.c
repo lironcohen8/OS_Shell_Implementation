@@ -100,7 +100,7 @@ int process_arglist(int count, char **arglist) {
 			int pipe_status = pipe(pipefds);
 			if (pipe_status == -1) {
 				printf("Pipe creation failed: %s\n", strerror(errno));
-				return 0;
+				exit(1);
 			}
 			int pid1 = fork();
 			if (pid1 < 0) { // error in fork
