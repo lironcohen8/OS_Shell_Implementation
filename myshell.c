@@ -17,7 +17,7 @@ int prepare(void)
 }
 
 int process_arglist(int count, char **arglist) {
-	int child_exit_status, exec_status, dup2_status;
+	int child_exit_status, exec_status, dup2_status, close_status;
 	int i;
 
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
@@ -104,7 +104,11 @@ int process_arglist(int count, char **arglist) {
 			}
 			if (pid1 == 0) { // first child executes the first command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
-				close(pipefds[0]); // closing reading pd for writing child
+				close_status = close(pipefds[0]); // closing reading pd for writing child
+				if (close_status == -1) { // open failed
+					perror("Failed closing fd.");
+					exit(1);
+				}
 				arglist[i] = NULL; // first child only gets first command
 				dup2_status = dup2(pipefds[1], 1); // make standard output of first child to be fd1
 				if (dup2_status == -1) { // error in dup2
@@ -126,7 +130,11 @@ int process_arglist(int count, char **arglist) {
 				}
 				if (pid2 == 0) { // second child executes the second command
 					signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
-					close(pipefds[1]); // closing writing pd for reading child
+					close_status = close(pipefds[1]); // closing writing pd for reading child
+					if (close_status == -1) { // open failed
+						perror("Failed closing fd.");
+						exit(1);
+					}
 					arglist[i] = arglist[0]; // copy name to the first argument of the second command
 					dup2_status = dup2(pipefds[0], 0); // make standard input of second child to be fd0
 					if (dup2_status == -1) { // error in dup2
@@ -141,8 +149,16 @@ int process_arglist(int count, char **arglist) {
 				}
 				else {
 					waitpid(pid2, &child_exit_status, 0); // parent waits for second child to finish
-					close(pipefds[0]);
-					close(pipefds[1]);
+					close_status = close(pipefds[0]);
+					if (close_status == -1) { // open failed
+						perror("Failed closing fd.");
+						exit(1);
+					}
+					close_status = close(pipefds[1]);
+					if (close_status == -1) { // open failed
+						perror("Failed closing fd.");
+						exit(1);
+					}
 				}
 			}
 		}
