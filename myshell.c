@@ -17,13 +17,11 @@ int prepare(void)
 }
 
 int process_arglist(int count, char **arglist) {
-	int child_exit_status, exec_status, dup2_status, close_status;
+	int child_exit_status, exec_status, dup2_status, close_status, wait_finish_status;
 	int i;
 
 	// TODO understand if I need to add while (-1 != wait(&status)) for general waiting
 	// TODO understand if the error print should be like in shell.c
-	// TODO understand how to implements errors from wait 
-	// TODO understand how to implements errors from pipe
 
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
@@ -71,7 +69,11 @@ int process_arglist(int count, char **arglist) {
 			}
 		}
 		else { // parent waits for child to finish
-			waitpid(pid, &child_exit_status, 0);
+			wait_finish_status = waitpid(pid, &child_exit_status, 0);
+			if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
+				printf("Waitpid failed: %s\n", strerror(errno));
+				exit(1);
+			}
 		}
 	}
 
@@ -92,7 +94,11 @@ int process_arglist(int count, char **arglist) {
 				}
 			}
 			else { // parent waits for child to finish
-				waitpid(pid, &child_exit_status, 0);
+				wait_finish_status = waitpid(pid, &child_exit_status, 0);
+				if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
+					printf("Waitpid failed: %s\n", strerror(errno));
+					exit(1);
+				}
 			}
 		}
 		else { // command has a pipe
@@ -127,7 +133,11 @@ int process_arglist(int count, char **arglist) {
 				}
 			}
 			else { // parent
-				waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
+				wait_finish_status = waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
+				if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
+					printf("Waitpid failed: %s\n", strerror(errno));
+					exit(1);
+				}
 				int pid2 = fork();
 				if (pid2 < 0) { // error in fork
 					printf("Fork failed: %s\n", strerror(errno));
@@ -153,7 +163,11 @@ int process_arglist(int count, char **arglist) {
 					}
 				}
 				else {
-					waitpid(pid2, &child_exit_status, 0); // parent waits for second child to finish
+					wait_finish_status = waitpid(pid2, &child_exit_status, 0); // parent waits for second child to finish
+					if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
+						printf("Waitpid failed: %s\n", strerror(errno));
+						exit(1);
+					}
 					close_status = close(pipefds[0]);
 					if (close_status == -1) { // open failed
 						printf("Fd closing failed: %s\n", strerror(errno));
