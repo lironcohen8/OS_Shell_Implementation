@@ -28,7 +28,7 @@ int process_arglist(int count, char **arglist) {
 			arglist[count-1] = NULL; // not send "&" symbol to execvp
 			exec_status = execvp(arglist[0], arglist);
 			if (exec_status == -1) { // exec failed
-				perror("Failed executing execvp");
+				perror("Failed executing execvp.");
 				exit(1);
 			}
 		}
@@ -40,6 +40,10 @@ int process_arglist(int count, char **arglist) {
 	else if (strcmp(arglist[count-2], ">") == 0) { // command has output redirecting
 		char *filename = arglist[count-1];
 		int fd = open(filename, O_WRONLY | O_CREAT, 00777);
+		if (fd < 0) { // open failed
+			perror("Failed creating or opening file.");
+			exit(1);
+		}
 		int pid = fork();
 		if (pid == 0) { // child executes th command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
@@ -47,7 +51,7 @@ int process_arglist(int count, char **arglist) {
 			dup2(fd, 1); // make standard output of child to be fd
 			exec_status = execvp(arglist[0], arglist);
 			if (exec_status == -1) { // exec failed
-				perror("Failed executing execvp");
+				perror("Failed executing execvp.");
 				exit(1);
 			}
 		}
@@ -64,7 +68,7 @@ int process_arglist(int count, char **arglist) {
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				exec_status = execvp(arglist[0], arglist);
 				if (exec_status == -1) { // exec failed
-					perror("Failed executing execvp");
+					perror("Failed executing execvp.");
 					exit(1);
 				}
 			}
@@ -87,7 +91,7 @@ int process_arglist(int count, char **arglist) {
 				dup2(pipefds[1], 1); // make standard output of first child to be fd1
 				exec_status = execvp(arglist[0], arglist);
 				if (exec_status == -1) { // exec failed
-					perror("Failed executing execvp");
+					perror("Failed executing execvp.");
 					exit(1);
 				}
 			}
@@ -101,7 +105,7 @@ int process_arglist(int count, char **arglist) {
 					dup2(pipefds[0], 0); // make standard input of second child to be fd0
 					exec_status = execvp(arglist[i], &arglist[i]); // only sending the second command
 					if (exec_status == -1) { // exec failed
-						perror("Failed executing execvp");
+						perror("Failed executing execvp.");
 						exit(1);
 					}
 				}
