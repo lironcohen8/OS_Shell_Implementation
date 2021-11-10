@@ -17,7 +17,8 @@ int prepare(void)
 }
 
 int process_arglist(int count, char **arglist) {
-	int child_exit_status, i, exec_status;
+	int child_exit_status, exec_status, dup2_status;
+	int i;
 
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
@@ -48,7 +49,11 @@ int process_arglist(int count, char **arglist) {
 		if (pid == 0) { // child executes th command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			arglist[count-2] = NULL; // not send ">" symbol and filename to execvp
-			dup2(fd, 1); // make standard output of child to be fd
+			dup2_status = dup2(fd, 1); // make standard output of child to be fd
+			if (dup2_status == -1) { // error in dup2
+				perror("Error in dup2.");
+				exit(1);
+			}
 			exec_status = execvp(arglist[0], arglist);
 			if (exec_status == -1) { // exec failed
 				perror("Failed executing execvp.");
@@ -80,7 +85,7 @@ int process_arglist(int count, char **arglist) {
 			int pipefds[2]; // array for fds from pipe 
 			int pipe_status = pipe(pipefds);
 			if (pipe_status == -1) {
-				printf("Error creating pipe: %s\n", strerror(errno));
+				perror("Error creating pipe.");
 				return 0;
 			}
 			int pid1 = fork();
@@ -88,7 +93,11 @@ int process_arglist(int count, char **arglist) {
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				close(pipefds[0]); // closing reading pd for writing child
 				arglist[i] = NULL; // first child only gets first command
-				dup2(pipefds[1], 1); // make standard output of first child to be fd1
+				dup2_status = dup2(pipefds[1], 1); // make standard output of first child to be fd1
+				if (dup2_status == -1) { // error in dup2
+					perror("Error in dup2.");
+					exit(1);
+				}
 				exec_status = execvp(arglist[0], arglist);
 				if (exec_status == -1) { // exec failed
 					perror("Failed executing execvp.");
@@ -102,7 +111,11 @@ int process_arglist(int count, char **arglist) {
 					signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 					close(pipefds[1]); // closing writing pd for reading child
 					arglist[i] = arglist[0]; // copy name to the first argument of the second command
-					dup2(pipefds[0], 0); // make standard input of second child to be fd0
+					dup2_status = dup2(pipefds[0], 0); // make standard input of second child to be fd0
+					if (dup2_status == -1) { // error in dup2
+						perror("Error in dup2.");
+						exit(1);
+					}
 					exec_status = execvp(arglist[i], &arglist[i]); // only sending the second command
 					if (exec_status == -1) { // exec failed
 						perror("Failed executing execvp.");
