@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 
 int get_command_pipe_index(int count, char **arglist);
+void exit(int status);
 
 int prepare(void)
 {
@@ -16,13 +17,20 @@ int prepare(void)
 }
 
 int process_arglist(int count, char **arglist) {
-	int child_exit_status, i;
+	int child_exit_status, i, exec_status;
 
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
+		if (pid < 0) { // error
+			//TODO add here
+		}
 		if (pid == 0) { // child executes the command
 			arglist[count-1] = NULL; // not send "&" symbol to execvp
-			execvp(arglist[0], arglist);
+			exec_status = execvp(arglist[0], arglist);
+			if (exec_status == -1) { // exec failed
+				perror("Failed executing execvp");
+				exit(1);
+			}
 		}
 		else { // parent does not wait for child to finish
 			signal(SIGCHLD, SIG_IGN); // SIGCHLD is ignored, the child entry is deleted from the process table. no zombie.
@@ -37,7 +45,11 @@ int process_arglist(int count, char **arglist) {
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			arglist[count-2] = NULL; // not send ">" symbol and filename to execvp
 			dup2(fd, 1); // make standard output of child to be fd
-			execvp(arglist[0], arglist);
+			exec_status = execvp(arglist[0], arglist);
+			if (exec_status == -1) { // exec failed
+				perror("Failed executing execvp");
+				exit(1);
+			}
 		}
 		else { // parent waits for child to finish
 			waitpid(pid, &child_exit_status, 0);
@@ -50,7 +62,11 @@ int process_arglist(int count, char **arglist) {
 			int pid = fork();
 			if (pid == 0) { // child executes the command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
-				execvp(arglist[0], arglist);
+				exec_status = execvp(arglist[0], arglist);
+				if (exec_status == -1) { // exec failed
+					perror("Failed executing execvp");
+					exit(1);
+				}
 			}
 			else { // parent waits for child to finish
 				waitpid(pid, &child_exit_status, 0);
@@ -69,7 +85,11 @@ int process_arglist(int count, char **arglist) {
 				close(pipefds[0]); // closing reading pd for writing child
 				arglist[i] = NULL; // first child only gets first command
 				dup2(pipefds[1], 1); // make standard output of first child to be fd1
-				execvp(arglist[0], arglist);
+				exec_status = execvp(arglist[0], arglist);
+				if (exec_status == -1) { // exec failed
+					perror("Failed executing execvp");
+					exit(1);
+				}
 			}
 			else { // parent
 				waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
@@ -79,7 +99,11 @@ int process_arglist(int count, char **arglist) {
 					close(pipefds[1]); // closing writing pd for reading child
 					arglist[i] = arglist[0]; // copy name to the first argument of the second command
 					dup2(pipefds[0], 0); // make standard input of second child to be fd0
-					execvp(arglist[i], &arglist[i]); // only sending the second command
+					exec_status = execvp(arglist[i], &arglist[i]); // only sending the second command
+					if (exec_status == -1) { // exec failed
+						perror("Failed executing execvp");
+						exit(1);
+					}
 				}
 				else {
 					waitpid(pid2, &child_exit_status, 0); // parent waits for second child to finish
