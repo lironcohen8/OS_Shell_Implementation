@@ -18,7 +18,7 @@ int prepare(void)
 
 int process_arglist(int count, char **arglist) {
 	int child_exit_status, exec_status, dup2_status, close_status, wait_finish_status;
-	int i;
+	int pipe_index;
 
 	// TODO understand if I need to add while (-1 != wait(&status)) for general waiting
 	// TODO understand if the error print should be like in shell.c
@@ -78,8 +78,8 @@ int process_arglist(int count, char **arglist) {
 	}
 
 	else {
-		i = get_command_pipe_index(count, arglist);
-		if (i == -1) { // regular single command 
+		pipe_index = get_command_pipe_index(count, arglist);
+		if (pipe_index == -1) { // regular single command 
 			int pid = fork();
 			if (pid < 0) { // error in fork
 				printf("Fork failed: %s\n", strerror(errno));
@@ -120,7 +120,7 @@ int process_arglist(int count, char **arglist) {
 					printf("Fd closing failed: %s\n", strerror(errno));
 					exit(1);
 				}
-				arglist[i] = NULL; // first child only gets first command
+				arglist[pipe_index] = NULL; // first child only gets first command
 				dup2_status = dup2(pipefds[1], 1); // make standard output of first child to be fd1
 				if (dup2_status == -1) { // error in dup2
 					printf("Dup2 failed: %s\n", strerror(errno));
@@ -145,19 +145,18 @@ int process_arglist(int count, char **arglist) {
 						printf("Fd closing failed: %s\n", strerror(errno));
 						exit(1);
 					}
-					arglist[i] = arglist[0]; // copy name to the first argument of the second command
 					dup2_status = dup2(pipefds[0], 0); // make standard input of second child to be fd0
 					if (dup2_status == -1) { // error in dup2
 						printf("Dup2 failed: %s\n", strerror(errno));
 						exit(1);
 					}
-					exec_status = execvp(arglist[i], &arglist[i]); // only sending the second command
+					exec_status = execvp(arglist[pipe_index+1], &arglist[pipe_index+1]); // only sending the second command
 					if (exec_status == -1) { // exec failed
 						printf("Execvp failed: %s\n", strerror(errno));
 						exit(1);
 					}
 				}
-				else {
+				else { // parent
 					wait_finish_status = waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
 					if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 						printf("Waitpid failed: %s\n", strerror(errno));
@@ -169,12 +168,12 @@ int process_arglist(int count, char **arglist) {
 						exit(1);
 					}
 					close_status = close(pipefds[0]);
-					if (close_status == -1) { // open failed
+					if (close_status == -1) { // close failed
 						printf("Fd closing failed: %s\n", strerror(errno));
 						exit(1);
 					}
 					close_status = close(pipefds[1]);
-					if (close_status == -1) { // open failed
+					if (close_status == -1) { // close failed
 						printf("Fd closing failed: %s\n", strerror(errno));
 						exit(1);
 					}
