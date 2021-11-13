@@ -116,7 +116,7 @@ int process_arglist(int count, char **arglist) {
 			if (pid1 == 0) { // first child executes the first command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 				close_status = close(pipefds[0]); // closing reading pd for writing child
-				if (close_status == -1) { // open failed
+				if (close_status == -1) { // close failed
 					printf("Fd closing failed: %s\n", strerror(errno));
 					exit(1);
 				}
@@ -141,7 +141,7 @@ int process_arglist(int count, char **arglist) {
 				if (pid2 == 0) { // second child executes the second command
 					signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 					close_status = close(pipefds[1]); // closing writing pd for reading child
-					if (close_status == -1) { // open failed
+					if (close_status == -1) { // close failed
 						printf("Fd closing failed: %s\n", strerror(errno));
 						exit(1);
 					}
