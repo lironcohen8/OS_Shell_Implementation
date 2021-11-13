@@ -42,7 +42,7 @@ int process_arglist(int count, char **arglist) {
 		}
 	}
 
-	else if (strcmp(arglist[count-2], ">") == 0) { // command has output redirecting
+	else if (count > 1 && strcmp(arglist[count-2], ">") == 0) { // command has output redirecting
 		char *filename = arglist[count-1];
 		int fd = open(filename, O_WRONLY | O_CREAT, 00777);
 		if (fd < 0) { // open failed
@@ -133,11 +133,6 @@ int process_arglist(int count, char **arglist) {
 				}
 			}
 			else { // parent
-				wait_finish_status = waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
-				if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
-					printf("Waitpid failed: %s\n", strerror(errno));
-					exit(1);
-				}
 				int pid2 = fork();
 				if (pid2 < 0) { // error in fork
 					printf("Fork failed: %s\n", strerror(errno));
@@ -163,6 +158,11 @@ int process_arglist(int count, char **arglist) {
 					}
 				}
 				else {
+					wait_finish_status = waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
+					if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
+						printf("Waitpid failed: %s\n", strerror(errno));
+						exit(1);
+					}
 					wait_finish_status = waitpid(pid2, &child_exit_status, 0); // parent waits for second child to finish
 					if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 						printf("Waitpid failed: %s\n", strerror(errno));
