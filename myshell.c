@@ -21,7 +21,6 @@ int process_arglist(int count, char **arglist) {
 	int pipe_index;
 
 	// TODO understand if I need to add while (-1 != wait(&status)) for general waiting
-	// TODO understand if the error print should be like in shell.c
 
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
@@ -54,12 +53,17 @@ int process_arglist(int count, char **arglist) {
 			perror("Fork failed");
 			exit(1);
 		}
-		if (pid == 0) { // child executes th command
+		if (pid == 0) { // child executes the command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			arglist[count-2] = NULL; // not send ">" symbol and filename to execvp
 			dup2_status = dup2(fd, 1); // make standard output of child to be fd
 			if (dup2_status == -1) { // error in dup2
 				perror("Dup2 failed");
+				exit(1);
+			}
+			close_status = close(fd); // closing fd
+			if (close_status == -1) { // close failed
+				perror("File closing failed");
 				exit(1);
 			}
 			exec_status = execvp(arglist[0], arglist);
@@ -72,6 +76,11 @@ int process_arglist(int count, char **arglist) {
 			wait_finish_status = waitpid(pid, &child_exit_status, 0);
 			if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 				perror("Waitpid failed");
+				exit(1);
+			}
+			close_status = close(fd); // closing fd
+			if (close_status == -1) { // close failed
+				perror("File closing failed");
 				exit(1);
 			}
 		}
