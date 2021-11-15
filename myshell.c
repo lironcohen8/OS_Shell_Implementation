@@ -20,8 +20,6 @@ int process_arglist(int count, char **arglist) {
 	int child_exit_status, exec_status, dup2_status, close_status, wait_finish_status;
 	int pipe_index;
 
-	// TODO understand if I need to add while (-1 != wait(&status)) for general waiting
-
 	if (strcmp(arglist[count-1], "&") == 0) { // process needs to run in the background
 		int pid = fork();
 		if (pid < 0) { // error in fork
@@ -43,7 +41,7 @@ int process_arglist(int count, char **arglist) {
 
 	else if (count > 1 && strcmp(arglist[count-2], ">") == 0) { // command has output redirecting
 		char *filename = arglist[count-1];
-		int fd = open(filename, O_WRONLY | O_CREAT, 00777);
+		int fd = open(filename, O_RDWR | O_CREAT, 00777);
 		if (fd < 0) { // open failed
 			perror("Open or create file failed");
 			exit(1);
@@ -56,12 +54,12 @@ int process_arglist(int count, char **arglist) {
 		if (pid == 0) { // child executes the command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
 			arglist[count-2] = NULL; // not send ">" symbol and filename to execvp
-			dup2_status = dup2(fd, 1); // make standard output of child to be fd
+			dup2_status = dup2(fd, 1); // make standard output of child to be file
 			if (dup2_status == -1) { // error in dup2
 				perror("Dup2 failed");
 				exit(1);
 			}
-			close_status = close(fd); // closing fd
+			close_status = close(fd); // closing file
 			if (close_status == -1) { // close failed
 				perror("File closing failed");
 				exit(1);
@@ -78,7 +76,7 @@ int process_arglist(int count, char **arglist) {
 				perror("Waitpid failed");
 				exit(1);
 			}
-			close_status = close(fd); // closing fd
+			close_status = close(fd); // closing file
 			if (close_status == -1) { // close failed
 				perror("File closing failed");
 				exit(1);
@@ -205,6 +203,7 @@ int process_arglist(int count, char **arglist) {
 
 int finalize(void)
 {
+	signal(SIGINT, SIG_DFL); // restore shell termination upon SIGINT
 	return 0;
 }
 
