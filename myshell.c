@@ -9,10 +9,19 @@
 
 int get_command_pipe_index(int count, char **arglist);
 void exit(int status);
+void sigchld_handler(int signum, siginfo_t* info, void *ptr);
 
 int prepare(void)
 {
 	signal(SIGINT, SIG_IGN); // shell should not terminate upon SIGINT
+	struct sigaction sigchld_action; // struct of sigaction to pass to registration
+	memset(&sigchld_action, 0, sizeof(sigchld_action)); // setting sigaction mem to 0
+	sigchld_action.sa_sigaction = sigchld_handler; // setting handler to my function
+	sigchld_action.sa_flags = SA_RESTART; // reseting flags
+	if (sigaction(SIGCHLD, &sigchld_action, NULL) != 0) { // registering handler
+		perror("Error in SIGCHLD handler registration");
+		return 1;
+	}
 	return 0;
 }
 
@@ -204,6 +213,7 @@ int process_arglist(int count, char **arglist) {
 int finalize(void)
 {
 	signal(SIGINT, SIG_DFL); // restore shell termination upon SIGINT
+	signal(SIGCHLD, SIG_DFL); // restore shell behavior upon SIGCHLD
 	return 0;
 }
 
@@ -214,4 +224,13 @@ int get_command_pipe_index(int count, char **arglist) {
 		}
 	}
 	return -1;
+}
+
+void sigchld_handler(int signum, siginfo_t* info, void *ptr) { // handler for deleting zombies
+	int pid = info->si.pid; // pid of child that raised SIGCHLD
+	int wait_finish_status = waitpid(pid, NULL, 0); // parent waits for child to finish
+	if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
+		perror("Waitpid in SIGCHLD handler failed");
+		exit(1);
+	}
 }
