@@ -227,7 +227,7 @@ int get_command_pipe_index(int count, char **arglist) {
 }
 
 void sigchld_handler(int signum, siginfo_t* info, void *ptr) { // handler for deleting zombies
-	int pid = info->si.pid; // pid of child that raised SIGCHLD
+	int pid = info->si_pid; // pid of child that raised SIGCHLD
 	int wait_finish_status = waitpid(pid, NULL, 0); // parent waits for child to finish
 	if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 		perror("Waitpid in SIGCHLD handler failed");
