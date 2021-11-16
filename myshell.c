@@ -24,7 +24,7 @@ int process_arglist(int count, char **arglist) {
 		int pid = fork();
 		if (pid < 0) { // error in fork
 			perror("Fork failed");
-			exit(1);
+			return 0;
 		}
 		if (pid == 0) { // child executes the command
 			arglist[count-1] = NULL; // not send "&" symbol to execvp
@@ -44,12 +44,12 @@ int process_arglist(int count, char **arglist) {
 		int fd = open(filename, O_RDWR | O_CREAT, 00777);
 		if (fd < 0) { // open failed
 			perror("Open or create file failed");
-			exit(1);
+			return 0;
 		}
 		int pid = fork();
 		if (pid < 0) { // error in fork
 			perror("Fork failed");
-			exit(1);
+			return 0;
 		}
 		if (pid == 0) { // child executes the command
 			signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
@@ -74,12 +74,12 @@ int process_arglist(int count, char **arglist) {
 			wait_finish_status = waitpid(pid, &child_exit_status, 0);
 			if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 				perror("Waitpid failed");
-				exit(1);
+				return 0;
 			}
 			close_status = close(fd); // closing file
 			if (close_status == -1) { // close failed
 				perror("File closing failed");
-				exit(1);
+				return 0;
 			}
 		}
 	}
@@ -90,7 +90,7 @@ int process_arglist(int count, char **arglist) {
 			int pid = fork();
 			if (pid < 0) { // error in fork
 				perror("Fork failed");
-				exit(1);
+				return 0;
 			}
 			if (pid == 0) { // child executes the command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
@@ -104,7 +104,7 @@ int process_arglist(int count, char **arglist) {
 				wait_finish_status = waitpid(pid, &child_exit_status, 0);
 				if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 					perror("Waitpid failed");
-					exit(1);
+					return 0;
 				}
 			}
 		}
@@ -113,12 +113,12 @@ int process_arglist(int count, char **arglist) {
 			int pipe_status = pipe(pipefds);
 			if (pipe_status == -1) {
 				perror("Pipe creation failed");
-				exit(1);
+				return 0;
 			}
 			int pid1 = fork();
 			if (pid1 < 0) { // error in fork
 				perror("Fork failed");
-				exit(1);
+				return 0;
 			}
 			if (pid1 == 0) { // first child executes the first command
 				signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
@@ -148,7 +148,7 @@ int process_arglist(int count, char **arglist) {
 				int pid2 = fork();
 				if (pid2 < 0) { // error in fork
 					perror("Fork failed");
-					exit(1);
+					return 0;
 				}
 				if (pid2 == 0) { // second child executes the second command
 					signal(SIGINT, SIG_DFL); // foreground child should terminate upon SIGINT
@@ -177,22 +177,22 @@ int process_arglist(int count, char **arglist) {
 					close_status = close(pipefds[0]);
 					if (close_status == -1) { // close failed
 						perror("Fd closing failed");
-						exit(1);
+						return 0;
 					}
 					close_status = close(pipefds[1]);
 					if (close_status == -1) { // close failed
 						perror("Fd closing failed");
-						exit(1);
+						return 0;
 					}
 					wait_finish_status = waitpid(pid1, &child_exit_status, 0); // waits for first child to finish
 					if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 						perror("Waitpid failed");
-						exit(1);
+						return 0;
 					}
 					wait_finish_status = waitpid(pid2, &child_exit_status, 0); // parent waits for second child to finish
 					if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 						perror("Waitpid failed");
-						exit(1);
+						return 0;
 					}
 				}
 			}
