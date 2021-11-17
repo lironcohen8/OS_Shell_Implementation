@@ -47,6 +47,7 @@ int run_background_process(int count, char **arglist) {
 		}
 	}
 	// parent does not wait for child to finish
+	return 1;
 }
 
 int run_redirection(int count, char **arglist) {
@@ -92,6 +93,7 @@ int run_redirection(int count, char **arglist) {
 			return 0;
 		}
 	}
+	return 1;
 }
 
 int run_regular_cmd(int count, char **arglist) {
@@ -115,6 +117,7 @@ int run_regular_cmd(int count, char **arglist) {
 			return 0;
 		}
 	}
+	return 1;
 }
 
 int get_command_pipe_index(int count, char **arglist) {
@@ -151,7 +154,7 @@ int run_piped_commands(int count, char **arglist, int pipe_index) {
 			perror("Dup2 failed");
 			exit(1);
 		}
-		int close_status = close(pipefds[1]); // closing writing pd because it was dupped
+		close_status = close(pipefds[1]); // closing writing pd because it was dupped
 		if (close_status == -1) { // close failed
 			perror("Fd closing failed");
 			exit(1);
@@ -214,6 +217,7 @@ int run_piped_commands(int count, char **arglist, int pipe_index) {
 			}
 		}
 	}
+	return 1;
 }
 
 int process_arglist(int count, char **arglist) {
@@ -224,7 +228,7 @@ int process_arglist(int count, char **arglist) {
 	}
 
 	else if (count > 1 && strcmp(arglist[count-2], ">") == 0) { // command has output redirecting
-		if (run_redirection() == 0) {
+		if (run_redirection(count, arglist) == 0) {
 			return 0;
 		}
 	}
