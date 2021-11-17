@@ -10,8 +10,7 @@
 void exit(int status);
 
 void sigchld_handler(int signum, siginfo_t* info, void *ptr) { // handler for deleting zombies
-	pid_t pid = info->si_pid; // pid of child that raised SIGCHLD
-	int wait_finish_status = waitpid(pid, NULL, 0); // parent waits for child to finish
+	int wait_finish_status = waitpid(-1, NULL, WNOHANG); // parent waits for child to finish
 	if (wait_finish_status == -1 && errno != ECHILD && errno != EINTR) { // real error in waiting
 		perror("Waitpid in SIGCHLD handler failed");
 		exit(1);
