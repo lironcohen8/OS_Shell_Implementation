@@ -1,2 +1,2 @@
 # OS_HW2
-Shell implementation for OS course in Tel Aviv university 2021.
+Shell implementation Assignment for Operating Systems course at TAU 2021.
